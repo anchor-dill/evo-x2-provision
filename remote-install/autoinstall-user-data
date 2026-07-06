@@ -1,0 +1,37 @@
+#cloud-config
+# Ubuntu 24.04 unattended autoinstall for the EVO-X2 remote re-platform (s238).
+# Fully headless: wipes the disk, installs Ubuntu, brings up SSH + our keys + Tailscale,
+# then clones + runs Anchor's provision.sh. Captain never touches the box.
+# DEPS before firing:  [A] anchor-dill SSH key below  [B] TAILSCALE_AUTHKEY (headless rejoin)
+autoinstall:
+  version: 1
+  locale: en_US.UTF-8
+  keyboard: {layout: us}
+  identity:
+    hostname: evo-x2
+    username: scott
+    # hashed pw (placeholder — set via `mkpasswd -m sha-512` before firing; SSH-key is primary auth)
+    password: "$6$REPLACE_WITH_HASHED_PW"
+  ssh:
+    install-server: true
+    allow-pw: false
+    authorized-keys:
+      - "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJloXGwFdE0i9ksikNH80v7yU5sJ9uB9ICs7QuxQqlwl runpod"   # olorina
+      - "REPLACE_WITH_ANCHOR_DILL_PUBKEY"   # [DEP A] anchor drops her key
+  network:
+    version: 2
+    ethernets:
+      primary:
+        match: {name: "en*"}
+        dhcp4: true            # rejoins the LAN (192.168.4.x); LAN SSH is the reach-fallback if Tailscale needs manual auth
+  storage:
+    layout: {name: direct}     # single-disk, full wipe — the OS is disposable by design
+  packages: [openssh-server, curl, git, ca-certificates]
+  late-commands:
+    # rejoin the tailnet headless so .35/.140 reach it without a browser step
+    - curtin in-target -- bash -c "curl -fsSL https://tailscale.com/install.sh | sh"
+    - curtin in-target -- bash -c "tailscale up --ssh --authkey=REPLACE_WITH_TAILSCALE_AUTHKEY --hostname=evo-x2 || true"   # [DEP B]
+    - curtin in-target -- systemctl enable ssh
+    # hand off to Anchor's Linux-side spring-load on first boot
+    - curtin in-target -- bash -c "cd /home/scott && git clone https://github.com/anchor-dill/evo-x2-provision && chown -R scott:scott evo-x2-provision"
+  shutdown: reboot
