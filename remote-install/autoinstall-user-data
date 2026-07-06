@@ -16,8 +16,7 @@ autoinstall:
     install-server: true
     allow-pw: false
     authorized-keys:
-      - "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJloXGwFdE0i9ksikNH80v7yU5sJ9uB9ICs7QuxQqlwl anchor-dill"   # ANCHOR (this IS the key authed on the box today)
-      - "REPLACE_WITH_OLORINA_REAL_PUBKEY"   # [DEP] Olorina .35 key — the key above was ANCHORs, not yours; add YOURS or youre locked out
+      - "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJloXGwFdE0i9ksikNH80v7yU5sJ9uB9ICs7QuxQqlwl runpod"   # SHARED keypair — reaches box from BOTH .35 (Olorina) and .140 (Anchor). VERIFIED: sole key on box + sole .35 key. No lockout.
   network:
     version: 2
     ethernets:
