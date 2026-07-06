@@ -61,16 +61,21 @@ chmod +x "$LLAMA_DIR"/llama-server 2>/dev/null || chmod +x "$LLAMA_DIR"/bin/llam
 OK "llama.cpp staged"
 
 # ---------------------------------------------------------------------
-LOG "[PHASE 4] restore the model (staged from .140 first, HF fallback)"
+LOG "[PHASE 4] restore the model from NAS .113 over LAN (HF fallback)"
+# Anchor stashed both GGUFs byte-exact on the Synology at:
+#   sdill@100.72.23.128:/volume1/Sovereign_Core/qable_restore/
+# This box (Linux) pulls them over the tailnet at gigabit — ~5 min vs ~80 on HF.
+NAS_HOST="100.72.23.128"; NAS_USER="sdill"
+NAS_PATH="/volume1/Sovereign_Core/qable_restore"
 if [ ! -f "${MODEL_DIR}/${MODEL_FILE}" ]; then
-  LOG "  trying fast restore from .140 staging over tailnet..."
-  if scp -o StrictHostKeyChecking=no -o ConnectTimeout=8 \
-        "${STAGING_USER}@${STAGING_HOST}:${STAGING_PATH}/${MODEL_FILE}" \
-        "${STAGING_USER}@${STAGING_HOST}:${STAGING_PATH}/${MMPROJ_FILE}" \
-        "${MODEL_DIR}/" 2>/dev/null; then
-    OK "model restored from .140 (gigabit)"
+  LOG "  restoring from NAS (Synology needs scp -O)..."
+  if scp -O -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
+        "${NAS_USER}@${NAS_HOST}:${NAS_PATH}/${MODEL_FILE}" \
+        "${NAS_USER}@${NAS_HOST}:${NAS_PATH}/${MMPROJ_FILE}" \
+        "${MODEL_DIR}/" ; then
+    OK "model restored from NAS (gigabit)"
   else
-    WARN "staging restore failed — pulling from HuggingFace (slower)"
+    WARN "NAS restore failed — pulling from HuggingFace (slower)"
     curl -fL "https://huggingface.co/${HF_REPO}/resolve/main/${MODEL_FILE}" -o "${MODEL_DIR}/${MODEL_FILE}"
     curl -fL "https://huggingface.co/${HF_REPO}/resolve/main/${MMPROJ_FILE}" -o "${MODEL_DIR}/${MMPROJ_FILE}"
   fi
